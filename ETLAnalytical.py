@@ -7,7 +7,9 @@ from datetime import timedelta
 from pyspark.sql.functions import broadcast
 
 spark = SparkSession.builder.master('local').appName('EODBatchLoad').getOrCreate()
-spark.conf.set("spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation", "true")
+
+spark.conf.set("fs.azure.account.key.retailanalytics08.blob.core.windows.net","Vk+/9Z9quDj3p1cY1AIaZ4GrCr+bNgU7JnknY9DpuWlF6o31jWo6wrOSU3rciJs4sxQ0+M8dItaTrhhCgGsJzQ==")
+outfile="wasbs://data@retailanalytics08.blob.core.windows.net/output"
 
 # function to calculate number of seconds from minutes
 minutes = lambda i: i * 60
@@ -51,7 +53,7 @@ latestdf.createOrReplaceTempView("tmp_latestdf")
 quote_final = spark.sql(
     "select trade_dt, event_tm, event_seq_no, exchange,bid_price, bid_size, ask_price, ask_size, last_trade_price, last_avg_price,bid_price - trade_price as bid_pr_mv, ask_price - trade_price as ask_pr_mv from tmp_latestdf left outer join last_pr_df on tmp_latestdf.symbol=last_pr_df.symbol")
 
-quote_final.write.partitionBy("trade_dt").mode("overwrite").parquet("dbfs:/output_dir/etlquote")
-
+#quote_final.write.partitionBy("trade_dt").mode("overwrite").parquet("dbfs:/output_dir/etlquote")
+quote_final.write.partitionBy("trade_dt").mode("overwrite").parquet(outfile)
 
 
