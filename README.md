@@ -56,6 +56,40 @@ $0.45.\
 ● Maintain a job status table to keep track of running progress of each workflow.\
 ● Support workflow/job rerun in case of failure while running the job.
 
+**Software Used in Implementation**
+Data Store :
+MySql 5.7 on Azure cloud  
+Azure Blob Storage
+
+Compute: Databricks Apache Spark 3.1.1 Cluster on Azure Cloud
+Job Schedule : Databricks Jon schedule on Azure Cloud
+Programming Language: Python
+Editor : Jupyter Notebook
+
+**Tables Names:**
+batch_control_tb = mantain the current and previous close of business day
+![image](https://user-images.githubusercontent.com/75573079/127578491-7cbb41a4-ccfc-4c27-b887-253ec1d6c4a8.png)
+
+**Job_status_tb= job status information**
+![image](https://user-images.githubusercontent.com/75573079/127578783-f4d656ba-1b94-4115-82a5-11a317d67425.png)
+
+**Azure Blob Storage for JSON , CSV and Parquet Files**
+![image](https://user-images.githubusercontent.com/75573079/127578896-21de523e-0b93-4a60-bfd0-094adc51b4ef.png)
+
+![image](https://user-images.githubusercontent.com/75573079/127578847-f87174f1-2108-41a9-b925-df4d4b62ec11.png)
+
+**Spark Jobs on Databricks**
+![image](https://user-images.githubusercontent.com/75573079/127578983-7308d1b4-e3cf-4f6f-9e8a-0efbb3fcb869.png)
+
+
+**Databricks Spark Cluster**
+![image](https://user-images.githubusercontent.com/75573079/127579030-e166846b-dd36-4a12-8df7-61de24e5fc88.png)
+
+
+
+
+  
+
 
 
 
