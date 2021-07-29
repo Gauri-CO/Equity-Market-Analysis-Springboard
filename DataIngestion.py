@@ -1,3 +1,5 @@
+
+
 import pyspark
 from pyspark.sql.types import StructType, StructField, IntegerType, LongType, StringType, FloatType, DateType, \
     TimestampType
@@ -6,8 +8,27 @@ import json
 from typing import List
 from datetime import datetime
 from pyspark.sql import SparkSession
+import mysql.connector
+from mysql.connector import Error
+
+
+def get_db_connection():
+    try:
+        connection = mysql.connector.connect(host='batchdb.mysql.database.azure.com',
+                                             database='batchstartdb',
+                                             user='batchuser@batchdb',
+                                             password='August@2021')
+        if connection.is_connected():
+            db_Info = connection.get_server_info()
+            print("Connected to MySQL Server version ", db_Info)
+            return connection
+
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+
 
 spark = SparkSession.builder.master('local').appName('app').getOrCreate()
+
 
 common_event = StructType([ \
     StructField("trade_dt", DateType(), True), \
@@ -102,28 +123,57 @@ def parse_json(line):
 
 
 if __name__ == "__main__":
-    spark.conf.set("fs.azure.account.key.retailanalytics08.blob.core.windows.net",
-                   "Vk+/9Z9quDj3p1cY1AIaZ4GrCr+bNgU7JnknY9DpuWlF6o31jWo6wrOSU3rciJs4sxQ0+M8dItaTrhhCgGsJzQ==")
 
-    filenamecsv = "wasbs://data@retailanalytics08.blob.core.windows.net/csv"
-    # filenamejson = "C://Users/gauri/PycharmProjects/GuidedCapstoneProject/capstonedocs/data/json/part-00000-c6c48831-3d45-4887-ba5f-82060885fc6c-c000.txt"
-    filenamejson = "wasbs://data@retailanalytics08.blob.core.windows.net/json"
-    # output_dir="wasbs://output@retailanalytics08.blob.core.windows.net"
-    spark = create_session()
+    try:
+            
+        
+        spark.conf.set("fs.azure.account.key.retailanalytics08.blob.core.windows.net", \
+                       "Vk+/9Z9quDj3p1cY1AIaZ4GrCr+bNgU7JnknY9DpuWlF6o31jWo6wrOSU3rciJs4sxQ0+M8dItaTrhhCgGsJzQ==")
+                       
+        filenamecsv = "wasbs://data@retailanalytics08.blob.core.windows.net/csv"
+        filenamejson = "wasbs://data@retailanalytics08.blob.core.windows.net/json"
+       
 
-    raw = spark.sparkContext.textFile(filenamecsv)
-    parsed = raw.map(lambda line: parse_csv(line))
-    data = spark.createDataFrame(parsed, common_event)
-    data.show()
-    data.write.partitionBy("partition").mode("overwrite").parquet("output_dir")
+        con = get_db_connection()
+        cursor = con.cursor()
+        print("You're connected to database")
+        cursor.execute("select curr_dt, prev_dt from batch_control_tb where curr_ind=1;")
+        record = list(cursor.fetchone())
+        current_date = record[0]
+        previous_date = record[1]
+        Job_Id = "DataIngestionJob" + "_" + str(current_date)
+        print("Batch is running for Job Id : {}".format(Job_Id))
+        print("Batch is running for {}".format(current_date))
+        print("Previous Batch Date {}".format(previous_date))
 
-    rawj = spark.sparkContext.textFile(filenamejson)
-    parsedj = rawj.map(lambda line: parse_json(line))
-    dataj = spark.createDataFrame(parsedj, common_event)
-    dataj.write.partitionBy("partition").mode("overwrite").parquet("output_dir")
+        raw = spark.sparkContext.textFile(filenamecsv)
+        parsed = raw.map(lambda line: parse_csv(line))
+        data = spark.createDataFrame(parsed, common_event)
+        data.show()
+        data.write.partitionBy("partition").mode("overwrite").parquet("output_dir")
 
-    print(data.count())
-    print(dataj.count())
+        rawj = spark.sparkContext.textFile(filenamejson)
+        parsedj = rawj.map(lambda line: parse_json(line))
+        dataj = spark.createDataFrame(parsedj, common_event)
+        dataj.write.partitionBy("partition").mode("overwrite").parquet("output_dir")
+
+        print(data.count())
+        print(dataj.count())
+
+        
+        args = [Job_Id, 'SUCCESS']
+        result_args = cursor.callproc('update_job_status', args)
+
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+        args = [Job_Id, 'FAILED']
+        result_args = cursor.callproc('update_job_status', args)
+
+    finally:
+        if con.is_connected():
+            cursor.close()
+            con.close()
+            print("MySQL connection is closed")
 
 
 
